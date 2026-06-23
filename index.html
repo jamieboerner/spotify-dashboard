@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spotify User Behaviour Analysis — Jamie Boerner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green: #1DB954;
+  --green-dim: rgba(29,185,84,0.10);
+  --green-border: rgba(29,185,84,0.25);
+  --black: #121212;
+  --surface: #181818;
+  --surface2: #232323;
+  --border: #2a2a2a;
+  --text: #ffffff;
+  --muted: #b3b3b3;
+  --dim: #535353;
+  --red: #e53935;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  background: var(--black);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* HEADER */
+header {
+  background: #0a0a0a;
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left { display: flex; align-items: center; gap: 16px; }
+
+.spotify-dot {
+  width: 10px; height: 10px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.header-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.header-sub {
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.header-badge {
+  font-size: 10px;
+  color: var(--green);
+  border: 1px solid var(--green-border);
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* HERO */
+.hero {
+  padding: 60px 40px 40px;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.hero-hook {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 16px;
+}
+
+.hero-headline {
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 20px;
+}
+
+.hero-headline span { color: var(--green); }
+
+.hero-sub {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 480px;
+}
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.stat-card.green-border { border-color: var(--green-border); }
+
+.stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+
+.stat-value.green { color: var(--green); }
+.stat-value.red { color: var(--red); }
+
+.stat-desc {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* NAV TABS */
+.nav-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 40px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.nav-tab {
+  padding: 16px 24px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--dim);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+
+.nav-tab:hover { color: var(--muted); }
+.nav-tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+/* SECTIONS */
+.section { display: none; padding: 40px; }
+.section.active { display: block; }
+
+.section-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 8px;
+}
+
+.section-headline {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.section-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 32px;
+  line-height: 1.6;
+  max-width: 700px;
+}
+
+/* GRIDS */
+.chart-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.chart-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.chart-grid-1 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+/* CHART CARDS */
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.chart-card.highlight { border-color: var(--green-border); }
+
+.chart-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.chart-card-sub {
+  font-size: 12px;
+  color: var(--dim);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.chart-wrap {
+  position: relative;
+  height: 220px;
+}
+
+.chart-wrap.tall { height: 300px; }
+.chart-wrap.short { height: 160px; }
+
+/* INSIGHT BOX */
+.insight-box {
+  background: var(--green-dim);
+  border: 1px solid var(--green-border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.insight-box strong { color: var(--green); }
+
+/* METRIC CARDS ROW */
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 16px;
+}
+
+.metric-card-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 12px;
+}
+
+.metric-row-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.metric-tier { font-size: 11px; color: var(--muted); }
+.metric-val { font-size: 20px; font-weight: 700; }
+.metric-val.green { color: var(--green); }
+.metric-divider { height: 1px; background: var(--border); margin: 10px 0; }
+.metric-gap {
+  font-size: 10px;
+  color: var(--dim);
+  margin-bottom: 4px;
+}
+.gap-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(29,185,84,0.15);
+  color: var(--green);
+}
+
+/* CALCULATOR */
+.calc-card {
+  background: var(--surface);
+  border: 1px solid var(--green-border);
+  border-radius: 12px;
+  padding: 32px;
+  margin-bottom: 24px;
+}
+
+.calc-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.calc-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 28px;
+}
+
+.slider-row {
+  margin-bottom: 24px;
+}
+
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.slider-name {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.slider-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green);
+}
+
+input[type=range] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--green);
+  cursor: pointer;
+}
+
+.calc-results {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-top: 28px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+
+.calc-result-card {
+  text-align: center;
+}
+
+.calc-result-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 8px;
+}
+
+.calc-result-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--green);
+}
+
+.calc-result-sub {
+  font-size: 11px;
+  color: var(--dim);
+  margin-top: 4px;
+}
+
+/* TABLE */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--dim);
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.data-table tr:first-child td { color: var(--text); font-weight: 600; }
+.data-table tr:hover td { background: var(--surface2); }
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #000;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.rank-badge.dim {
+  background: var(--surface2);
+  color: var(--muted);
+}
+
+/* FOOTER */
+footer {
+  padding: 32px 40px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-left { font-size: 11px; color: var(--dim); }
+.footer-left strong { color: var(--muted); }
+.footer-right { font-size: 10px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+
+/* REVENUE ZERO */
+.zero-bar {
+  height: 4px;
+  background: var(--red);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.4s;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="spotify-dot"></div>
+    <div>
+      <div class="header-title">Spotify User Behaviour Analysis</div>
+      <div class="header-sub">spotify_db · 50,000 users · MySQL · DBeaver</div>
+    </div>
+  </div>
+  <div class="header-badge">A4 · Jamie Boerner · Hult IBS</div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <div class="hero-hook">The Central Finding</div>
+    <h1 class="hero-headline">The platform has 22,525 free riders.<br><span>They're not the problem.</span><br>They're the opportunity.</h1>
+    <p class="hero-sub">A SQL-based analysis of 50,000 synthetic Spotify users across 12 markets, normalized to 3NF across 8 tables, revealing a conversion failure — not a product failure.</p>
+  </div>
+  <div class="hero-stats">
+    <div class="stat-card green-border">
+      <div class="stat-label">Free tier users</div>
+      <div class="stat-value green">22,525</div>
+      <div class="stat-desc">45.1% of all users</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Monthly revenue from Free</div>
+      <div class="stat-value red">$0</div>
+      <div class="stat-desc">Despite 10.02h/week listening</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active users</div>
+      <div class="stat-value">84%</div>
+      <div class="stat-desc">42,109 of 50,000</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Markets</div>
+      <div class="stat-value">12</div>
+      <div class="stat-desc">165 users between largest & smallest</div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="showTab('overview', this)">Overview</button>
+  <button class="nav-tab" onclick="showTab('behaviour', this)">Behaviour</button>
+  <button class="nav-tab" onclick="showTab('revenue', this)">Revenue Gap</button>
+  <button class="nav-tab" onclick="showTab('features', this)">Feature Demand</button>
+  <button class="nav-tab" onclick="showTab('targets', this)">Conversion Targets</button>
+</div>
+
+<!-- TAB: OVERVIEW -->
+<div id="tab-overview" class="section active">
+  <div class="section-title">Intro — The Dataset</div>
+  <div class="section-headline">50,000 users. 12 countries. One flat file.</div>
+  <div class="section-sub">A synthetic Spotify user behaviour dataset, normalized from 17 columns into 8 tables (3NF). Foreign keys assigned via VLOOKUP. Imported into MySQL via DBeaver.</div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card highlight">
+      <div class="chart-card-title">Subscription Tiers</div>
+      <div class="chart-card-sub">User count by subscription type</div>
+      <div class="chart-wrap"><canvas id="tierChart"></canvas></div>
+      <div class="insight-box"><strong>45.1%</strong> of users are on the Free tier — the single largest group — yet generate zero subscription revenue.</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Age Distribution</div>
+      <div class="chart-card-sub">Users by age group</div>
+      <div class="chart-wrap"><canvas id="ageChart"></canvas></div>
+      <div class="insight-box">The <strong>46+ age group</strong> is the platform's largest segment at 16,742 users — significantly larger than any other cohort.</div>
+    </div>
+  </div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-card-title">Subscription Status</div>
+      <div class="chart-card-sub">Active vs inactive users</div>
+      <div class="chart-wrap short"><canvas id="statusChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Country Distribution</div>
+      <div class="chart-card-sub">Users per market (all 12 countries)</div>
+      <div class="chart-wrap tall"><canvas id="countryChart"></canvas></div>
+      <div class="insight-box">Only <strong>165 users</strong> separate the largest market (India, 4,265) from the smallest (USA, 4,100). The dataset is globally balanced.</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: BEHAVIOUR -->
+<div id="tab-behaviour" class="section">
+  <div class="section-title">Verse II — User Behaviour</div>
+  <div class="section-headline">Free users listen just as much. Pay nothing. Behave identically.</div>
+  <div class="section-sub">Across every behavioural metric — listening hours, skips, playlists, satisfaction — Free users are statistically indistinguishable from Premium users. Tier does not predict behaviour.</div>
+
+  <div class="metric-row">
+    <div class="metric-card">
+      <div class="metric-card-label">Avg hours / week</div>
+      <div class="metric-row-inner"><span class="metric-tier">Free</span><span class="metric-val green">10.02h</span></div>
+      <div class="metric-row-inner"><span class="metric-tier">Premium Indiv.</span><span class="metric-val">9.97h</span></div>
+      <div class="metric-divider"></div>
+      <div class="metric-gap">Gap</div>
+      <span class="gap-pill">0.05h difference</span>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card-label">Avg skips / day</div>
+      <div class="metric-row-inner"><span class="metric-tier">Free</span><span class="metric-val green">10.04</span></div>
+      <div class="metric-row-inner"><span class="metric-tier">Premium Indiv.</span><span class="metric-val">10.00</span></div>
+      <div class="metric-divider"></div>
+      <div class="metric-gap">Gap</div>
+      <span class="gap-pill">0.04 difference</span>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card-label">Avg playlists</div>
+      <div class="metric-row-inner"><span class="metric-tier">Free</span><span class="metric-val green">7.99</span></div>
+      <div class="metric-row-inner"><span class="metric-tier">Premium Indiv.</span><span class="metric-val">8.03</span></div>
+      <div class="metric-divider"></div>
+      <div class="metric-gap">Gap</div>
+      <span class="gap-pill">0.04 difference</span>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card-label">Satisfaction (1–5)</div>
+      <div class="metric-row-inner"><span class="metric-tier">Free</span><span class="metric-val green">3.64</span></div>
+      <div class="metric-row-inner"><span class="metric-tier">Premium Indiv.</span><span class="metric-val">3.65</span></div>
+      <div class="metric-divider"></div>
+      <div class="metric-gap">Gap</div>
+      <span class="gap-pill">0.01 difference</span>
+    </div>
+  </div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card highlight">
+      <div class="chart-card-title">Avg Listening Hours by Tier</div>
+      <div class="chart-card-sub">Free users rank #1 in listening engagement</div>
+      <div class="chart-wrap"><canvas id="hoursChart"></canvas></div>
+      <div class="insight-box"><strong>Free tier ranks #1</strong> in listening hours out of 5 subscription types. Engagement rank does not correlate with revenue contribution.</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Top Device by Subscription Tier</div>
+      <div class="chart-card-sub">Where users listen reveals intent</div>
+      <div class="chart-wrap"><canvas id="deviceChart"></canvas></div>
+      <div class="insight-box">Free users favour <strong>Smart Speaker</strong> (passive listening). Premium Individual users favour <strong>Car System</strong> (captive, intentional). Same hours — different conversion levers.</div>
+    </div>
+  </div>
+
+  <div class="chart-grid-1">
+    <div class="chart-card">
+      <div class="chart-card-title">Engagement Rank by Tier (Window Function)</div>
+      <div class="chart-card-sub">RANK() OVER (ORDER BY AVG listening hours DESC) — all 5 tiers compared</div>
+      <div style="overflow-x:auto; margin-top: 8px;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Engagement Rank</th>
+              <th>Tier</th>
+              <th>Avg Hours/Week</th>
+              <th>Avg Skips/Day</th>
+              <th>Avg Playlists</th>
+              <th>Avg Rating</th>
+              <th>Revenue Contribution</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="rank-badge">1</span></td><td>Free</td><td>10.02h</td><td>10.04</td><td>7.99</td><td>3.64/5</td><td style="color:var(--red); font-weight:700;">$0</td></tr>
+            <tr><td><span class="rank-badge dim">2</span></td><td>Premium Individual</td><td>9.97h</td><td>10.00</td><td>8.03</td><td>3.65/5</td><td style="color:var(--green);">$154,178.71/mo</td></tr>
+            <tr><td><span class="rank-badge dim">3</span></td><td>Premium Family</td><td>9.96h</td><td>10.01</td><td>8.03</td><td>3.62/5</td><td style="color:var(--green);">$80,631.18/mo</td></tr>
+            <tr><td><span class="rank-badge dim">4</span></td><td>Premium Duo</td><td>9.96h</td><td>10.07</td><td>7.95</td><td>3.63/5</td><td style="color:var(--green);">$62,227.52/mo</td></tr>
+            <tr><td><span class="rank-badge dim">5</span></td><td>Student</td><td>9.95h</td><td>10.01</td><td>8.01</td><td>3.66/5</td><td style="color:var(--green);">$27,050.84/mo</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="insight-box"><strong>The most engaged tier generates $0.</strong> Across all 5 metrics, the spread between Free and Student (last place) is less than 1%. Tier does not predict behaviour.</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: REVENUE -->
+<div id="tab-revenue" class="section">
+  <div class="section-title">Chorus — The Conversion Gap</div>
+  <div class="section-headline">Why is 45% of the platform free?</div>
+  <div class="section-sub">The platform works. The business model doesn't. 22,525 fully engaged users generating zero subscription revenue is not a product problem — it's a conversion problem.</div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card highlight">
+      <div class="chart-card-title">Monthly Revenue by Subscription Tier</div>
+      <div class="chart-card-sub">Based on actual user counts × monthly fee</div>
+      <div class="chart-wrap"><canvas id="revenueChart"></canvas></div>
+      <div class="insight-box">Total monthly revenue from paying tiers: <strong>$324,088.25</strong>. Free tier contribution: <strong style="color:var(--red);">$0</strong>. Converting even 10% of Free users to Premium Individual would add <strong>$24,701/month</strong>.</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Revenue per User by Tier</div>
+      <div class="chart-card-sub">Monthly fee × user base efficiency</div>
+      <div class="chart-wrap"><canvas id="revenuePerUserChart"></canvas></div>
+      <div class="insight-box">Free users generate <strong style="color:var(--red);">$0 per user</strong> despite consuming platform resources. Premium Family users generate <strong>$17.99/user</strong> — 17.99x the value of the platform's largest group.</div>
+    </div>
+  </div>
+
+  <!-- CALCULATOR -->
+  <div class="calc-card">
+    <div class="calc-title">Missed Revenue Calculator</div>
+    <div class="calc-sub">If Spotify converted a percentage of Free users to Premium Individual ($10.99/mo), how much revenue would be unlocked? Drag the sliders to explore.</div>
+
+    <div class="slider-row">
+      <div class="slider-label">
+        <span class="slider-name">Conversion rate of Free users</span>
+        <span class="slider-val" id="convRateVal">10%</span>
+      </div>
+      <input type="range" min="1" max="50" value="10" step="1" id="convRate" oninput="updateCalc()">
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-label">
+        <span class="slider-name">Monthly price per converted user</span>
+        <span class="slider-val" id="priceVal">$10.99</span>
+      </div>
+      <input type="range" min="5" max="18" value="10.99" step="0.01" id="price" oninput="updateCalc()">
+    </div>
+
+    <div class="calc-results">
+      <div class="calc-result-card">
+        <div class="calc-result-label">Users converted</div>
+        <div class="calc-result-value" id="converted">2,253</div>
+        <div class="calc-result-sub">of 22,525 Free users</div>
+      </div>
+      <div class="calc-result-card">
+        <div class="calc-result-label">Monthly revenue added</div>
+        <div class="calc-result-value" id="monthly">$24,759</div>
+        <div class="calc-result-sub">new monthly revenue</div>
+      </div>
+      <div class="calc-result-card">
+        <div class="calc-result-label">Annual revenue added</div>
+        <div class="calc-result-value" id="annual">$297,108</div>
+        <div class="calc-result-sub">annualised impact</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: FEATURES -->
+<div id="tab-features" class="section">
+  <div class="section-title">Bridge — Feature Demand</div>
+  <div class="section-headline">No single feature wins. Every feature is wanted.</div>
+  <div class="section-sub">Free users want all 6 desired features almost equally. The spread between most and least desired is just 71 users out of 22,525. There is no single conversion lever — personalised nudges are needed.</div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card highlight">
+      <div class="chart-card-title">Desired Features — Free Users</div>
+      <div class="chart-card-sub">User count per desired feature (Free tier only)</div>
+      <div class="chart-wrap tall"><canvas id="featuresChart"></canvas></div>
+      <div class="insight-box"><strong>71 users</strong> separate #1 (Better AI Recommendations, 3,780) from #6 (Lyrics Translation, 3,709). Demand is perfectly flat — no feature dominates.</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Desired Features — All Tiers</div>
+      <div class="chart-card-sub">Overall feature demand across all 50,000 users</div>
+      <div class="chart-wrap tall"><canvas id="featuresAllChart"></canvas></div>
+      <div class="insight-box">Across all tiers, the same flat distribution holds. <strong>Mood-based Auto Playlists</strong> leads overall (8,419) but the spread is only 188 users from #1 to #6.</div>
+    </div>
+  </div>
+
+  <div class="chart-grid-1">
+    <div class="chart-card">
+      <div class="chart-card-title">Top Desired Feature by Tier</div>
+      <div class="chart-card-sub">Each tier has a different #1 priority — no universal killer feature exists</div>
+      <div style="overflow-x:auto; margin-top: 8px;">
+        <table class="data-table">
+          <thead>
+            <tr><th>Tier</th><th>Rank 1</th><th>Rank 2</th><th>Rank 3</th><th>Implication</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Free</td><td style="color:var(--green);">Better AI Recommendations</td><td>Concert Alerts</td><td>Social Listening</td><td>Discovery-driven</td></tr>
+            <tr><td>Premium Individual</td><td style="color:var(--green);">Concert Alerts</td><td>Mood-based Playlists</td><td>Better AI Recommendations</td><td>Event-driven</td></tr>
+            <tr><td>Premium Family</td><td style="color:var(--green);">Mood-based Playlists</td><td>Concert Alerts</td><td>Social Listening</td><td>Curated experience</td></tr>
+            <tr><td>Premium Duo</td><td style="color:var(--green);">HiFi Audio</td><td>Lyrics Translation</td><td>Mood-based Playlists</td><td>Quality-driven</td></tr>
+            <tr><td>Student</td><td style="color:var(--green);">Social Listening</td><td>Mood-based Playlists</td><td>Concert Alerts</td><td>Social-driven</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="insight-box">Every tier wants something different. A single feature launch cannot convert 22,525 Free users. <strong>Personalised feature nudges</strong> matched to each user's #1 desire is the only viable approach.</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: TARGETS -->
+<div id="tab-targets" class="section">
+  <div class="section-title">Outro — Conversion Targets</div>
+  <div class="section-headline">These are not casual listeners. They are Spotify's most engaged users, paying nothing.</div>
+  <div class="section-sub">Using RANK() OVER window function across the Free tier, ordered by avg_listening_hours_per_week DESC — these are the highest-probability conversion targets.</div>
+
+  <div class="chart-grid-1">
+    <div class="chart-card highlight">
+      <div class="chart-card-title">Top 10 Free Users by Engagement — Conversion Priority List</div>
+      <div class="chart-card-sub">Query: SELECT user_id, avg_listening_hours_per_week, country, desired_feature, RANK() OVER (ORDER BY avg_listening_hours_per_week DESC) FROM User WHERE sub_type = 'Free' LIMIT 10</div>
+      <div style="overflow-x:auto; margin-top: 16px;">
+        <table class="data-table">
+          <thead>
+            <tr><th>Rank</th><th>User ID</th><th>Hours/Week</th><th>Playlists</th><th>Country</th><th>Desired Feature</th><th>Conversion Lever</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="rank-badge">1</span></td><td>38,674</td><td style="color:var(--green); font-weight:700;">26.25h</td><td>3</td><td>Italy</td><td>Mood-based Auto Playlists</td><td>Trial: Mood Playlists</td></tr>
+            <tr><td><span class="rank-badge dim">2</span></td><td>10,860</td><td>25.38h</td><td>8</td><td>Canada</td><td>Lyrics Translation</td><td>Trial: Lyrics Translation</td></tr>
+            <tr><td><span class="rank-badge dim">3</span></td><td>21,484</td><td>24.64h</td><td>12</td><td>Mexico</td><td>Lyrics Translation</td><td>Trial: Lyrics Translation</td></tr>
+            <tr><td><span class="rank-badge dim">4</span></td><td>39,986</td><td>24.50h</td><td>10</td><td>India</td><td>Mood-based Auto Playlists</td><td>Trial: Mood Playlists</td></tr>
+            <tr><td><span class="rank-badge dim">5</span></td><td>6,501</td><td>24.43h</td><td>8</td><td>USA</td><td>Concert Alerts</td><td>Trial: Concert Alerts</td></tr>
+            <tr><td><span class="rank-badge dim">6</span></td><td>6,443</td><td>24.10h</td><td>8</td><td>UK</td><td>HiFi Audio</td><td>Trial: HiFi Audio</td></tr>
+            <tr><td><span class="rank-badge dim">7</span></td><td>38,056</td><td>23.63h</td><td>10</td><td>Mexico</td><td>Better AI Recommendations</td><td>Trial: AI Recommendations</td></tr>
+            <tr><td><span class="rank-badge dim">8</span></td><td>21,791</td><td>23.61h</td><td>8</td><td>Canada</td><td>Mood-based Auto Playlists</td><td>Trial: Mood Playlists</td></tr>
+            <tr><td><span class="rank-badge dim">9</span></td><td>7,465</td><td>23.49h</td><td>8</td><td>Canada</td><td>Mood-based Auto Playlists</td><td>Trial: Mood Playlists</td></tr>
+            <tr><td><span class="rank-badge dim">10</span></td><td>41,446</td><td>23.27h</td><td>11</td><td>Mexico</td><td>HiFi Audio</td><td>Trial: HiFi Audio</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="insight-box">The top Free user (ID 38,674) listens <strong>26.25 hours per week</strong> — more than most paid subscribers — and wants Mood-based Auto Playlists. A targeted 30-day free trial of that single feature is the highest-probability conversion action Spotify can take at zero acquisition cost.</div>
+    </div>
+  </div>
+
+  <div class="chart-grid-3">
+    <div class="chart-card">
+      <div class="chart-card-title">Action 1</div>
+      <div style="margin-top:12px; font-size:13px; font-weight:700; margin-bottom:8px;">Target the engaged</div>
+      <div style="font-size:12px; color:var(--muted); line-height:1.7;">Deploy personalised Premium trials to Free users above 8 hours/week listening time. No new marketing spend required — the users already exist.</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Action 2</div>
+      <div style="margin-top:12px; font-size:13px; font-weight:700; margin-bottom:8px;">Personalise the pitch</div>
+      <div style="font-size:12px; color:var(--muted); line-height:1.7;">Show each Free user the feature they ranked #1. Not a one-size-fits-all campaign — 22,525 users want 22,525 different things.</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Action 3</div>
+      <div style="margin-top:12px; font-size:13px; font-weight:700; margin-bottom:8px;">Price for the market</div>
+      <div style="font-size:12px; color:var(--muted); line-height:1.7;">India is the largest market. USA is the smallest. Both on identical pricing. Introduce regional pricing tiers — lower entry price, higher conversion volume.</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-left"><strong>Jamie Boerner</strong> · Hult International Business School · Data Management & SQL · A4 Individual Assignment · June 2026</div>
+  <div class="footer-right">spotify_db · MySQL · DBeaver · 50,000 rows · 8 tables · 3NF</div>
+</footer>
+
+<script>
+// TAB SWITCHING
+function showTab(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// CHART DEFAULTS
+Chart.defaults.color = '#535353';
+Chart.defaults.font.family = 'Montserrat';
+Chart.defaults.font.size = 11;
+const GREEN = '#1DB954';
+const RED = '#e53935';
+const SURFACE2 = '#232323';
+const greens = ['#1DB954','#17a349','#118c3e','#0c7534','#075e29'];
+const greensDim = ['rgba(29,185,84,0.9)','rgba(29,185,84,0.65)','rgba(29,185,84,0.45)','rgba(29,185,84,0.3)','rgba(29,185,84,0.2)'];
+
+// TIER DONUT
+new Chart(document.getElementById('tierChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Free','Premium Individual','Family & Duo','Student'],
+    datasets: [{ data: [22525,14029,8930,4516], backgroundColor: [RED, GREEN, '#2a2a2a','#444'], borderWidth: 0, hoverOffset: 6 }]
+  },
+  options: { responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{ legend:{ position:'right', labels:{ padding:14, boxWidth:10, color:'#b3b3b3' } } } }
+});
+
+// AGE
+new Chart(document.getElementById('ageChart'), {
+  type: 'bar',
+  data: {
+    labels: ['18–25','26–35','36–45','46+'],
+    datasets: [{ data:[11109,11037,11112,16742], backgroundColor: greensDim, borderRadius:4, borderSkipped:false }]
+  },
+  options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{grid:{color:'#1e1e1e'}, ticks:{color:'#535353'}}, x:{grid:{display:false}, ticks:{color:'#535353'}} } }
+});
+
+// STATUS
+new Chart(document.getElementById('statusChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Active','Inactive'],
+    datasets: [{ data:[42109,7891], backgroundColor:[GREEN,'#232323'], borderWidth:0 }]
+  },
+  options: { responsive:true, maintainAspectRatio:false, cutout:'70%', plugins:{ legend:{ position:'right', labels:{ color:'#b3b3b3', padding:12, boxWidth:10 } } } }
+});
+
+// COUNTRY
+new Chart(document.getElementById('countryChart'), {
+  type: 'bar',
+  data: {
+    labels: ['India','Brazil','Canada','Mexico','Indonesia','Germany','Spain','UK','Italy','France','Australia','USA'],
+    datasets: [{ data:[4265,4242,4231,4216,4196,4186,4166,4164,4156,4152,4126,4100], backgroundColor: GREEN, borderRadius:3, borderSkipped:false }]
+  },
+  options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{min:4050, grid:{color:'#1e1e1e'}, ticks:{color:'#535353'}}, y:{grid:{display:false}, ticks:{color:'#b3b3b3'}} } }
+});
+
+// HOURS
+new Chart(document.getElementById('hoursChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Free','Prem. Individual','Prem. Duo','Prem. Family','Student'],
+    datasets: [{ data:[10.02,9.97,9.96,9.96,9.95], backgroundColor:[RED, GREEN,'#444','#333','#2a2a2a'], borderRadius:4, borderSkipped:false }]
+  },
+  options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{min:9.90, max:10.06, grid:{color:'#1e1e1e'}, ticks:{color:'#535353', callback:v=>v+'h'}}, x:{grid:{display:false}, ticks:{color:'#535353'}} } }
+});
+
+// DEVICE
+new Chart(document.getElementById('deviceChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Free','Prem. Individual','Prem. Family','Prem. Duo','Student'],
+    datasets: [
+      { label:'Smart Speaker', data:[4638,2686,877,935,914], backgroundColor:'rgba(29,185,84,0.9)', borderRadius:3 },
+      { label:'Desktop', data:[4579,2765,896,869,928], backgroundColor:'rgba(29,185,84,0.6)', borderRadius:3 },
+      { label:'Car System', data:[4470,2906,899,888,881], backgroundColor:'rgba(29,185,84,0.4)', borderRadius:3 },
+      { label:'Mobile', data:[4428,2830,921,845,913], backgroundColor:'rgba(29,185,84,0.25)', borderRadius:3 },
+      { label:'Tablet', data:[4410,2842,889,911,880], backgroundColor:'rgba(29,185,84,0.12)', borderRadius:3 }
+    ]
+  },
+  options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#b3b3b3', boxWidth:10, padding:8}}}, scales:{ y:{grid:{color:'#1e1e1e'}, ticks:{color:'#535353'}}, x:{grid:{display:false}, ticks:{color:'#535353'}} } }
+});
+
+// REVENUE
+new Chart(document.getElementById('revenueChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Prem. Individual','Prem. Family','Prem. Duo','Student','Free'],
+    datasets: [{ data:[154178.71,80631.18,62227.52,27050.84,0], backgroundColor:[GREEN,GREEN,GREEN,GREEN,RED], borderRadius:4, borderSkipped:false }]
+  },
+  options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{grid:{color:'#1e1e1e'}, ticks:{color:'#535353', callback:v=>'$'+v.toLocaleString()}}, x:{grid:{display:false}, ticks:{color:'#535353'}} } }
+});
+
+// REVENUE PER USER
+new Chart(document.getElementById('revenuePerUserChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Prem. Family','Prem. Duo','Prem. Individual','Student','Free'],
+    datasets: [{ data:[17.99,13.99,10.99,5.99,0], backgroundColor:[GREEN,GREEN,GREEN,GREEN,RED], borderRadius:4, borderSkipped:false }]
+  },
+  options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{grid:{color:'#1e1e1e'}, ticks:{color:'#535353', callback:v=>'$'+v}}, x:{grid:{display:false}, ticks:{color:'#535353'}} } }
+});
+
+// FEATURES FREE
+new Chart(document.getElementById('featuresChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Better AI Rec.','Concert Alerts','Social Listening','Mood Playlists','HiFi Audio','Lyrics Translation'],
+    datasets: [{ data:[3780,3776,3772,3749,3739,3709], backgroundColor: greensDim, borderRadius:4, borderSkipped:false }]
+  },
+  options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{min:3680, grid:{color:'#1e1e1e'}, ticks:{color:'#535353'}}, y:{grid:{display:false}, ticks:{color:'#b3b3b3'}} } }
+});
+
+// FEATURES ALL
+new Chart(document.getElementById('featuresAllChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Mood Playlists','Concert Alerts','Social Listening','Better AI Rec.','Lyrics Translation','HiFi Audio'],
+    datasets: [{ data:[8419,8403,8369,8335,8243,8231], backgroundColor: greensDim, borderRadius:4, borderSkipped:false }]
+  },
+  options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{min:8100, grid:{color:'#1e1e1e'}, ticks:{color:'#535353'}}, y:{grid:{display:false}, ticks:{color:'#b3b3b3'}} } }
+});
+
+// CALCULATOR
+function updateCalc() {
+  const rate = parseInt(document.getElementById('convRate').value) / 100;
+  const price = parseFloat(document.getElementById('price').value);
+  const converted = Math.round(22525 * rate);
+  const monthly = converted * price;
+  const annual = monthly * 12;
+  document.getElementById('convRateVal').textContent = Math.round(rate * 100) + '%';
+  document.getElementById('priceVal').textContent = '$' + price.toFixed(2);
+  document.getElementById('converted').textContent = converted.toLocaleString();
+  document.getElementById('monthly').textContent = '$' + Math.round(monthly).toLocaleString();
+  document.getElementById('annual').textContent = '$' + Math.round(annual).toLocaleString();
+}
+updateCalc();
+</script>
+</body>
+</html>
